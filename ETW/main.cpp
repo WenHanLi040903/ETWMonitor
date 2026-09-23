@@ -4,7 +4,6 @@
 #include <clocale>	// std::setlocale
 #include <cstdio>	// std::wprintf
 #include <string>	// std::wstring
-#include <thread>	// std::thread
 
 #include "etw/ETWThread.h"
 
@@ -71,16 +70,18 @@ int main(){
         return 1;
     }
 
-    // ---- 启动ETW线程:Start()会阻塞在ProcessTrace,所以放到工作线程 ----
+    // ---- 启动ETW:Start()同步完成setup,内部再开线程阻塞收事件 ----
     ETWThread etw;
-    std::thread worker([&etw]{ etw.Start(); });
+    if (!etw.Start()) {
+        std::wprintf(L"启动失败,程序退出。\n");
+        return 1;
+    }
 
     std::wprintf(L"正在采集事件,按任意键停止...\n");
     (void)std::getchar();	// 主线程等用户按键(返回值故意忽略)
 
-    // ---- 从主线程停止:CloseTrace会解除ProcessTrace的阻塞 ----
+    // ---- 停止:CloseTrace解除ProcessTrace阻塞,并回收采集线程 ----
     etw.Stop();
-    worker.join();
 
     return 0;
 }

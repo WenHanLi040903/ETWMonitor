@@ -44,6 +44,10 @@ void ETWThread::StopStaleSession(){
                                  EVENT_TRACE_CONTROL_STOP			// 停止会话控制code
                                 );
     // TODO:异常处理
+    if (status == ERROR_SUCCESS || status == ERROR_WMI_INSTANCE_NOT_FOUND) {
+        // 正常：要么清掉了残留，要么本来就没有
+        return;
+    }
 }
 
 // 实现CreatSession(),开启ETW会话
@@ -105,25 +109,36 @@ void WINAPI ETWThread::OnEvent(PEVENT_RECORD pEvent){
 }
 
 
+// 析构:确保采集线程被回收
+// 若worker_析构时仍是joinable状态,std::thread会直接调用std::terminate终止进程
+ETWThread::~ETWThread(){
+    Stop();	// Stop()每一步都有if保护,重复调用安全
+}
+
 // 实现Start(),启动ETW线程
-void ETWThread::Start(){
+bool ETWThread::Start(){
     // 1.生成ETW会话配置单
     CreateETWProperties();
     
     // 2.创建并启动会话(内部会先清理残留会话)
     CreateSession();
-    //TODO:异常处理
+    //TODO:失败则return false
     
     // 3.订阅Provider
     EnableProviders();
+    //TODO:失败则return false
     
     // 4.打开实时会话,拿到消费端句柄
     OpenRealTimeTrace();
-    //TODO:失败处理
+    //TODO:失败则return false
     
-    // 5.阻塞式获取事件
-    //   ProcessTrace会一直卡在这里,直到别的线程调用Stop()
-    ProcessTrace(&traceHandle_, 1, nullptr, nullptr);
+    // 5.开线程去阻塞收事件
+    //   ProcessTrace会一直卡在worker_里,直到Stop()从别的线程调用CloseTrace
+    worker_ = std::thread([this]{
+        ProcessTrace(&traceHandle_, 1, nullptr, nullptr);
+    });
+    
+    return true;
 }
 
 // 实现Stop(),停止ETW线程
@@ -134,7 +149,12 @@ void ETWThread::Stop(){
         traceHandle_ = INVALID_PROCESSTRACE_HANDLE;
     }
     
-    // 2.再停止ETW会话
+    // 2.回收采集线程(此时ProcessTrace已返回,join立刻成功)
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+    
+    // 3.再停止ETW会话
     if (sessionHandle_ != 0) {
         ControlTraceW(sessionHandle_, cfg::kSessionName, props_, EVENT_TRACE_CONTROL_STOP);
         sessionHandle_ = 0;
