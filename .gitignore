@@ -1,0 +1,51 @@
+# ==================== Visual Studio ====================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+*.opendb
+*.aps
+*.ncb
+*.sdf
+*.opensdf
+*.cachefile
+
+# ==================== 编译产物 ====================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM/
+ARM64/
+*.exe
+*.pdb
+*.ilk
+*.idb
+*.obj
+*.tlog
+*.lastbuildstate
+*.iobj
+*.ipdb
+*.exp
+*.res
+*.log
+
+# ==================== Windows ====================
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ==================== 临时文件 ====================
+*.tmp
+*.bak
+*~
+
+# ==================== 本地文档（不上传） ====================
+架构设计.md
+ETW开发文档.md
