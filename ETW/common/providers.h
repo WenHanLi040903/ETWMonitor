@@ -24,5 +24,33 @@ namespace providers{
         { &kKernelProcess, 0x10},
         //{ &kKernelNetwork, 0x30},
     };
+
+    enum class FieldType {
+        UInt32,		// 32 位无符号整数
+        UInt64,		// 64 位无符号整数
+        UnicodeString,
+        FILETIME,
+    };
+
+    struct FieldDef {
+        const wchar_t* name;	// 字段名,必须与 manifest 里的定义完全一致(区分大小写)
+        FieldType      type;	// 值类型
+    };
+
+    // Microsoft-Windows-Kernel-Process 的 ProcessStart 事件字段
+    /*
+    <data name="ProcessID" inType="win:UInt32"/>
+    <data name="CreateTime" inType="win:FILETIME"/>
+    <data name="ParentProcessID" inType="win:UInt32"/>
+    <data name="SessionID" inType="win:UInt32"/>
+    <data name="ImageName" inType="win:UnicodeString"/>
+    */
+    inline constexpr FieldDef kProcessStart[] = {
+        { L"ProcessID",     FieldType::UInt32  },
+        { L"CreateTime",     FieldType::FILETIME },
+        { L"ParentProcessID", FieldType::UInt32 },
+        { L"SessionID", FieldType::UInt32 },
+        { L"ImageName", FieldType::UnicodeString}
+    };
     
 }// namespace providers
