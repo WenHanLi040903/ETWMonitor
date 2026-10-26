@@ -17,91 +17,62 @@ RawEvent::RawEvent(PEVENT_RECORD pEvent){
     // ---- 2) 壳子先拷过来(里面的指针还指着 ETW 缓冲区,最后统一修) ----
     rec_ = *pEvent;
 
-    // ---- 3) 算载荷长度:UserDataLength 打底,Size 只增不减 ----
-    // 取大值是为了不裁剪:扩展数据 DataPtr 指向的内容可能落在 UserDataLength
-    // 之外、Size 之内,整块搬才能保证相对偏移恒成立
-    // 注意这两个字段在 SDK 里都是 USHORT(16 位)
-    size_t payloadLen = pEvent->UserDataLength;
-
-    if (pEvent->EventHeader.Size > sizeof(EVENT_HEADER)) {
-        const size_t bySize = static_cast<size_t>(pEvent->EventHeader.Size)
-                            - sizeof(EVENT_HEADER);
-        if (bySize > payloadLen) {
-            payloadLen = bySize;
-        }
+    // ---- 3) 拷贝 UserData ----
+    // pEvent->UserData 是 void*,不允许指针运算,所以解释成 BYTE*(一单位 = 1 字节)
+    // pEvent->UserDataLength 是载荷所占字节数
+    // 校验:有长度却空指针 → 坏数据,直接退出
+    if (pEvent->UserDataLength > 0 && pEvent->UserData == nullptr) {
+        return;
     }
 
-    // ---- 4) 校验:这三条是唯一能防异常穿出回调的东西,不能省 ----
-    if (payloadLen > kMaxPayloadBytes) {
-        return;					// 长度离谱,判定为 Provider 报错
-    }
-    if (payloadLen > 0 && pEvent->UserData == nullptr) {
-        return;					// 有长度却没指针
-    }
-
-    const size_t extCount = pEvent->ExtendedDataCount;
-    if (extCount > 0 && pEvent->ExtendedData == nullptr) {
-        return;					// 报了项数却没有数组
-    }
-
-    // ---- 5) 落载荷(必须在重定位 DataPtr 之前,要用 userData_.data()) ----
-    if (payloadLen > 0) {
+    if (pEvent->UserDataLength > 0) {
         userData_.assign(reinterpret_cast<const BYTE*>(pEvent->UserData),
-                         reinterpret_cast<const BYTE*>(pEvent->UserData) + payloadLen);
+                         reinterpret_cast<const BYTE*>(pEvent->UserData) + pEvent->UserDataLength);
     }
 
-    // ---- 6) 落扩展数据项数组 ----
-    if (extCount > 0) {
-        const size_t extBytes = extCount * sizeof(EVENT_HEADER_EXTENDED_DATA_ITEM);
+    // ---- 4) 拷贝 ExtendedData ----
+    // ExtendedData 指向结构体数组:共 ExtendedDataCount 项,每项 sizeof(EVENT_HEADER_EXTENDED_DATA_ITEM) 字节
+    const size_t extCount = pEvent->ExtendedDataCount;
+    const size_t extBytes = extCount * sizeof(EVENT_HEADER_EXTENDED_DATA_ITEM);
+
+    // 校验:有项数却空指针 → 坏数据
+    if (extCount > 0 && pEvent->ExtendedData == nullptr) {
+        return;
+    }
+
+    if (extBytes > 0) {
         extendedData_.assign(reinterpret_cast<const BYTE*>(pEvent->ExtendedData),
                              reinterpret_cast<const BYTE*>(pEvent->ExtendedData) + extBytes);
-
-        // ---- 7) 重定位每一项的 DataPtr(最容易漏的一步) ----
         EVENT_HEADER_EXTENDED_DATA_ITEM* ext =
             reinterpret_cast<EVENT_HEADER_EXTENDED_DATA_ITEM*>(extendedData_.data());
 
+        // 源载荷区间 [srcBegin, srcEnd)
         const BYTE* srcBegin = reinterpret_cast<const BYTE*>(pEvent->UserData);
-        const BYTE* srcEnd   = srcBegin + payloadLen;
+        const BYTE* srcEnd   = srcBegin + pEvent->UserDataLength;
 
         for (size_t i = 0; i < extCount; ++i) {
+            // 读源
             const BYTE* srcData =
                 reinterpret_cast<const BYTE*>(pEvent->ExtendedData[i].DataPtr);
 
-            if (srcData == nullptr) {
-                ext[i].DataPtr = 0;	// 源本来就是空
-                continue;
-            }
-            if (srcBegin == nullptr) {
-                ext[i].DataPtr = 0;	// 没有载荷块,无法换算偏移
-                continue;
-            }
-            // 不在载荷区间内 -> 拷完也还原不了,置 0(注意是 >= srcEnd,尾后不算区间内)
-            // 用两个比较而不是指针相减,避免越界时相减的未定义行为
-            if (srcData < srcBegin || srcData >= srcEnd) {
+            // 源为空,或数据不在载荷区间内
+            if (srcData == nullptr || srcData < srcBegin || srcData >= srcEnd) {
                 ext[i].DataPtr = 0;
                 continue;
             }
 
-            // 核心:算相对载荷首地址的偏移,再换到新基址上
+            // 算相对载荷首地址的偏移,再换到新基址上
             const size_t off = static_cast<size_t>(srcData - srcBegin);
             ext[i].DataPtr = reinterpret_cast<ULONGLONG>(userData_.data() + off);
         }
     }
 
-    // ---- 8) 最后统一修 rec_ 的 3 处指针 ----
-    // 此后再没有任何操作会让 vector 的 data() 变地址,顺序上不可能写错
-    rec_.UserData       = userData_.empty() ? nullptr : userData_.data();
-    rec_.UserDataLength = static_cast<USHORT>(payloadLen);	// 字段是 USHORT,回写时截断
+    rec_.UserData     = userData_.empty() ? nullptr : userData_.data();
+    rec_.ExtendedData = extendedData_.empty()
+                      ? nullptr
+                      : reinterpret_cast<PEVENT_HEADER_EXTENDED_DATA_ITEM>(extendedData_.data());
+    rec_.UserContext  = nullptr;
 
-    rec_.ExtendedData   = extendedData_.empty()
-                        ? nullptr
-                        : reinterpret_cast<PEVENT_HEADER_EXTENDED_DATA_ITEM>(extendedData_.data());
-
-    // UserContext 原值是 OpenTrace 时传进去的 this(指向 ETWThread),
-    // 跨线程、跨会话都没有意义,清掉避免消费者误用
-    rec_.UserContext = nullptr;
-
-    // ---- 9) 全部成功,最后置位 ----
     valid_ = true;
 }
 
