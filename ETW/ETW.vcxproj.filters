@@ -13,13 +13,25 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\thread">
+      <UniqueIdentifier>{5E8D1A72-4C9B-4F36-A8D5-1B7C3E9F2A46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\data">
+      <UniqueIdentifier>{7B3E4F5A-6C8D-4E9F-A0B1-2C3D4E5F6A7B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\queue">
+      <UniqueIdentifier>{7D4F5A6B-8E0F-4AB1-C2D3-4E5F6A7B8C9D}</UniqueIdentifier>
+    </Filter>
     <Filter Include="头文件\common">
       <UniqueIdentifier>{8F2A6C41-3B7E-4D90-A5C8-1E4F7B2D9A30}</UniqueIdentifier>
     </Filter>
-    <Filter Include="源文件\etw">
-      <UniqueIdentifier>{5E8D1A72-4C9B-4F36-A8D5-1B7C3E9F2A46}</UniqueIdentifier>
+    <Filter Include="头文件\data">
+      <UniqueIdentifier>{8C4F5A6B-7D9E-4FA0-B1C2-3D4E5F6A7B8C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="头文件\etw">
+    <Filter Include="头文件\queue">
+      <UniqueIdentifier>{9C3D4E5F-6A7B-4C8D-0E9F-1A2B3C4D5E6F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\thread">
       <UniqueIdentifier>{2C6B9F41-7A3D-4E58-B1C4-9D2E6F8A0B31}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -27,19 +39,37 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="etw\ETWThread.cpp">
-      <Filter>源文件\etw</Filter>
+    <ClCompile Include="thread\ETWThread.cpp">
+      <Filter>源文件\thread</Filter>
+    </ClCompile>
+    <ClCompile Include="thread\ParserThread.cpp">
+      <Filter>源文件\thread</Filter>
+    </ClCompile>
+    <ClCompile Include="data\RawEvent.cpp">
+      <Filter>源文件\data</Filter>
+    </ClCompile>
+    <ClCompile Include="queue\RawEventQueue.cpp">
+      <Filter>源文件\queue</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\cfg.h">
       <Filter>头文件\common</Filter>
     </ClInclude>
-    <ClInclude Include="etw\ETWThread.h">
-      <Filter>头文件\etw</Filter>
-    </ClInclude>
-    <ClInclude Include="common\Providers.h">
+    <ClInclude Include="common\providers.h">
       <Filter>头文件\common</Filter>
+    </ClInclude>
+    <ClInclude Include="data\RawEvent.h">
+      <Filter>头文件\data</Filter>
+    </ClInclude>
+    <ClInclude Include="queue\RawEventQueue.h">
+      <Filter>头文件\queue</Filter>
+    </ClInclude>
+    <ClInclude Include="thread\ETWThread.h">
+      <Filter>头文件\thread</Filter>
+    </ClInclude>
+    <ClInclude Include="thread\ParserThread.h">
+      <Filter>头文件\thread</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

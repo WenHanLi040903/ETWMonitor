@@ -1,22 +1,9 @@
 #pragma once
-#include <cstddef>	// size_t
-#include <span>		// std::span(只读视图)
 #include <thread>	// std::thread
 #include <vector>
 #include <windows.h>
 #include <evntcons.h>	// PEVENT_RECORD 从这来(自动带入 evntrace.h)
-
-class RawEvent{
-    public:
-    	RawEvent(PEVENT_RECORD pEvent);
-    	bool IsValid() const noexcept { return valid_; }
-    	PEVENT_RECORD Pevent() noexcept { return &rec_; } // 这里返回拷贝后的指针
-    private:
-    	EVENT_RECORD rec_{}; // 这个属性用来存放EVENT_RECORD
-    	std::vector<BYTE> extendedData_;
-    	std::vector<BYTE> userData_;
-    	bool valid_ = false; // 标识位，标识对象是否已完成拷贝
-};
+#include "data/RawEvent.h"	// RawEvent:事件深拷贝容器
 
 class ETWThread{
     public:

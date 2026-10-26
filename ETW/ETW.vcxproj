@@ -137,12 +137,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="etw\ETWThread.cpp" />
+    <ClCompile Include="thread\ETWThread.cpp" />
+    <ClCompile Include="thread\ParserThread.cpp" />
+    <ClCompile Include="data\RawEvent.cpp" />
+    <ClCompile Include="queue\RawEventQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\cfg.h" />
     <ClInclude Include="common\providers.h" />
-    <ClInclude Include="etw\ETWThread.h" />
+    <ClInclude Include="data\RawEvent.h" />
+    <ClInclude Include="queue\RawEventQueue.h" />
+    <ClInclude Include="thread\ETWThread.h" />
+    <ClInclude Include="thread\ParserThread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

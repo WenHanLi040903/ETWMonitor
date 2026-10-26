@@ -5,7 +5,7 @@
 #include <cstdio>	// std::wprintf
 #include <string>	// std::wstring
 
-#include "etw/ETWThread.h"
+#include "thread/ETWThread.h"
 
 #pragma comment(lib, "shell32.lib")	// ShellExecuteExW 需要
 #pragma comment(lib, "advapi32.lib")	// OpenProcessToken / ETW API 需要
