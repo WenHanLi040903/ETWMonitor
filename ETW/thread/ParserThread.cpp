@@ -1,4 +1,6 @@
 #include "ParserThread.h"
+#include <atomic>	// std::atomic
+#include <cstdio>	// std::wprintf
 
 // 启动解析线程
 void ParserThread::Start(){
@@ -11,20 +13,32 @@ ParserThread::~ParserThread(){
 }
 
 // 停止:先停队列(唤醒阻塞中的 Pop),再回收线程
-// TODO: g_eventQueue.Stop();
-//       if (worker_.joinable()) { worker_.join(); }
 void ParserThread::Stop(){
-    // TODO
+    g_eventQueue.Stop();		// 置停止标志并唤醒阻塞中的 Pop
+
+    if (worker_.joinable()) {
+        worker_.join();			// 等 Worker 排空队列后退出
+    }
 }
 
-// 消费循环
-// TODO: while (true) {
-//           std::shared_ptr<RawEvent> ev = g_eventQueue.Pop();
-//           if (ev == nullptr) break;		// 已停止且排空
-//           // 解析 ev -> JSON -> 输出
-//       }
+// 消费循环(当前:只取数据并输出,解析后续再加)
 void ParserThread::Worker(){
-    // TODO
+    static std::atomic<unsigned long long> count{ 0 };	// 解析线程的处理计数
+
+    while (true) {
+        // 1) 阻塞取一个事件(队列停且空时返回 nullptr)
+        std::shared_ptr<RawEvent> ev = g_eventQueue.Pop();
+        if (ev == nullptr) {
+            break;		// 已停止且排空,退出
+        }
+
+        // 2) 输出事件信息 + 当前队列积压(验证链路用)
+        const unsigned long long n = ++count;
+        std::wprintf(L"[解析线程] 第 %llu 个事件 EventId=%u, 队列积压=%llu\n",
+                     n,
+                     static_cast<unsigned>(ev->Pevent()->EventHeader.EventDescriptor.Id),
+                     static_cast<unsigned long long>(g_eventQueue.Size()));
+    }
 }
 
 // ================= TDH 解析(待实现) =================

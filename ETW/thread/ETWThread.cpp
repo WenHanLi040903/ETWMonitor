@@ -1,6 +1,7 @@
 #include "ETWThread.h"
 #include "common/cfg.h"
 #include "common/providers.h"
+#include "queue/RawEventQueue.h"	// 事件队列(g_eventQueue)
 #include <atomic>	// std::atomic
 #include <cwchar>	// std::wcslen
 #include <cstring>	// memcpy
@@ -151,13 +152,14 @@ void WINAPI ETWThread::OnEvent(PEVENT_RECORD pEvent){
 
     // 深拷:必须在回调内完成
     // 回调返回后 pEvent 指向的 ETW 缓冲区会被回收,深拷后的对象才能安全留存
-    RawEvent ev(pEvent);
-    if (!ev.IsValid()) {
+    auto ev = std::make_shared<RawEvent>(pEvent);
+    if (!ev->IsValid()) {
         std::wprintf(L"[警告] 事件 %llu 深拷贝失败,已丢弃\n", n);
         return;
     }
 
-    // TODO: 把 ev 推送到全局队列,由消费者线程解析
+    // 推送到全局队列,交给解析线程消费(引用计数管理生命周期)
+    g_eventQueue.Push(std::move(ev));
 }
 
 

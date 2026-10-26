@@ -6,6 +6,7 @@
 #include <string>	// std::wstring
 
 #include "thread/ETWThread.h"
+#include "thread/ParserThread.h"
 
 #pragma comment(lib, "shell32.lib")	// ShellExecuteExW 需要
 #pragma comment(lib, "advapi32.lib")	// OpenProcessToken / ETW API 需要
@@ -72,16 +73,23 @@ int main(){
 
     // ---- 启动ETW:Start()同步完成setup,内部再开线程阻塞收事件 ----
     ETWThread etw;
+    ParserThread parser;
+
     if (!etw.Start()) {
         std::wprintf(L"启动失败,程序退出。\n");
         return 1;
     }
 
+    parser.Start();		// 启动解析线程(消费队列)
+
     std::wprintf(L"正在采集事件,按任意键停止...\n");
     (void)std::getchar();	// 主线程等用户按键(返回值故意忽略)
 
-    // ---- 停止:CloseTrace解除ProcessTrace阻塞,并回收采集线程 ----
+    // ---- 停止:顺序不能反 ----
+    // 1. 先停采集:不再产生新事件
     etw.Stop();
+    // 2. 再停解析:停队列(唤醒 Pop)+ 等 Worker 排空后退出
+    parser.Stop();
 
     return 0;
 }
