@@ -1,5 +1,8 @@
 #pragma once
 #include <thread>
+#include <windows.h>
+#include <evntcons.h>	// PEVENT_RECORD / EVENT_RECORD(其实 ParserThread.h 已带入)
+#include <tdh.h>		// TdhGetProperty 等
 #include "data/RawEvent.h"	// RawEvent
 #include "queue/RawEventQueue.h"	// RawEventQueue / g_eventQueue
 
